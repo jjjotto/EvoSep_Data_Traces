@@ -215,7 +215,7 @@ app.layout = html.Div([
             html.Div(id='upload-status', style={'marginTop': 5, 'fontSize': 12, 'color': 'green'}),
             html.Div([
                 html.Small("Tip: You can select .zip files, individual .txt files, or use Chrome/Edge to select entire folders.", 
-                          style={'color': '#666', 'fontSize': 11})
+                          style={'color': '#555', 'fontSize': 11})
             ], style={'marginTop': 3})
         ], id='upload-container', style={'display': 'inline-block'})
     ], style={'padding': '10px 20px', 'backgroundColor': '#f8f9fa', 'borderBottom': '1px solid #dee2e6'}),
@@ -381,22 +381,17 @@ def handle_upload(list_of_contents, list_of_filenames):
                 
                 if len(path_parts) >= 2:
                     # File is part of a folder structure (e.g., "ExampleData/200-SPD.../Pump-HP_Pressure.txt")
-                    # Find the run folder name (second-to-last part typically)
-                    if len(path_parts) >= 2:
-                        # Get the parent folder name (run folder)
-                        run_folder = path_parts[-2]
-                        
-                        if run_folder not in run_folders:
-                            run_folders[run_folder] = []
-                        
-                        run_folders[run_folder].append({
-                            'filename': path_parts[-1],
-                            'content': decoded
-                        })
-                        txt_files_count += 1
-                else:
-                    # Single file without folder structure - skip
-                    pass
+                    # Get the parent folder name (run folder)
+                    run_folder = path_parts[-2]
+                    
+                    if run_folder not in run_folders:
+                        run_folders[run_folder] = []
+                    
+                    run_folders[run_folder].append({
+                        'filename': path_parts[-1],
+                        'content': decoded
+                    })
+                    txt_files_count += 1
         except zipfile.BadZipFile:
             return 'example', f'Error: {filename} is not a valid ZIP file'
         except Exception as e:
