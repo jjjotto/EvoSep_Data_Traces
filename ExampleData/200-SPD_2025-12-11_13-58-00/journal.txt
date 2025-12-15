@@ -1,0 +1,35 @@
+12996
+Version:1.0
+Procedure.Name:200 SPD
+Procedure.Logname:200-SPD_2025-12-11_13-58-00
+Procedure.Samplename:BSA_8
+Procedure.Vialposition:Slot3:8 (S3-A8)
+Journal.SampleRun.AutosamplerInformation.Autosampler.SealingDepth.Value:197.698
+Journal.SampleRun.AutosamplerInformation.Autosampler.SealingDistance.Value:2.403
+Journal.SampleRun.Equilibration.PumpHP.MonitoredNominalVolume.Value:1.489
+Journal.SampleRun.Equilibration.PumpHP.DispensedVolume.Value:1.390
+Journal.SampleRun.Equilibration.PumpHP.MeasuredVolume.Value:1.486
+Journal.SampleRun.Equilibration.PumpHP.Pressure.Value:377.200
+Journal.SampleRun.Gradient.PumpA.GradientVolume.Value:0.900
+Journal.SampleRun.Gradient.PumpA.DispensedVolume.Value:1.910
+Journal.SampleRun.Gradient.PumpA.MeasuredVolume.Value:0.928
+Journal.SampleRun.Gradient.PumpB.GradientVolume.Value:0.000
+Journal.SampleRun.Gradient.PumpB.DispensedVolume.Value:0.950
+Journal.SampleRun.Gradient.PumpB.MeasuredVolume.Value:0.046
+Journal.SampleRun.Gradient.PumpC.GradientVolume.Value:16.087
+Journal.SampleRun.Gradient.PumpC.DispensedVolume.Value:17.570
+Journal.SampleRun.Gradient.PumpC.MeasuredVolume.Value:16.141
+Journal.SampleRun.Gradient.PumpD.GradientVolume.Value:5.899
+Journal.SampleRun.Gradient.PumpD.DispensedVolume.Value:6.770
+Journal.SampleRun.Gradient.PumpD.MeasuredVolume.Value:5.978
+Journal.SampleRun.Gradient.Total.GradientVolume.Value:22.887
+Journal.SampleRun.Gradient.Total.DispensedVolume.Value:27.200
+Journal.SampleRun.Gradient.Total.MeasuredVolume.Value:23.092
+Journal.SampleRun.FlowSensor.PumpA.FlowZeroAverage.Value:-0.000
+Journal.SampleRun.FlowSensor.PumpA.FlowZeroCompensation.Value:-0.001
+Journal.SampleRun.FlowSensor.PumpB.FlowZeroAverage.Value:0.001
+Journal.SampleRun.FlowSensor.PumpB.FlowZeroCompensation.Value:0.008
+Journal.SampleRun.FlowSensor.PumpC.FlowZeroAverage.Value:0.000
+Journal.SampleRun.FlowSensor.PumpC.FlowZeroCompensation.Value:-0.002
+Journal.SampleRun.FlowSensor.PumpD.FlowZeroAverage.Value:0.001
+Journal.SampleRun.FlowSensor.PumpD.FlowZeroCompensation.Value:-0.004

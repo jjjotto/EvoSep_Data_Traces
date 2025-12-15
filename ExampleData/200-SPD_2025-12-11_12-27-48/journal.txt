@@ -1,0 +1,35 @@
+13331
+Version:1.0
+Procedure.Name:200 SPD
+Procedure.Logname:200-SPD_2025-12-11_12-27-48
+Procedure.Samplename:
+Procedure.Vialposition:Slot3:2 (S3-A2)
+Journal.SampleRun.AutosamplerInformation.Autosampler.SealingDepth.Value:197.689
+Journal.SampleRun.AutosamplerInformation.Autosampler.SealingDistance.Value:2.394
+Journal.SampleRun.Equilibration.PumpHP.MonitoredNominalVolume.Value:1.483
+Journal.SampleRun.Equilibration.PumpHP.DispensedVolume.Value:1.400
+Journal.SampleRun.Equilibration.PumpHP.MeasuredVolume.Value:1.482
+Journal.SampleRun.Equilibration.PumpHP.Pressure.Value:330.500
+Journal.SampleRun.Gradient.PumpA.GradientVolume.Value:0.900
+Journal.SampleRun.Gradient.PumpA.DispensedVolume.Value:1.940
+Journal.SampleRun.Gradient.PumpA.MeasuredVolume.Value:0.919
+Journal.SampleRun.Gradient.PumpB.GradientVolume.Value:0.000
+Journal.SampleRun.Gradient.PumpB.DispensedVolume.Value:0.970
+Journal.SampleRun.Gradient.PumpB.MeasuredVolume.Value:0.037
+Journal.SampleRun.Gradient.PumpC.GradientVolume.Value:16.087
+Journal.SampleRun.Gradient.PumpC.DispensedVolume.Value:17.550
+Journal.SampleRun.Gradient.PumpC.MeasuredVolume.Value:16.136
+Journal.SampleRun.Gradient.PumpD.GradientVolume.Value:5.899
+Journal.SampleRun.Gradient.PumpD.DispensedVolume.Value:6.790
+Journal.SampleRun.Gradient.PumpD.MeasuredVolume.Value:5.934
+Journal.SampleRun.Gradient.Total.GradientVolume.Value:22.887
+Journal.SampleRun.Gradient.Total.DispensedVolume.Value:27.250
+Journal.SampleRun.Gradient.Total.MeasuredVolume.Value:23.026
+Journal.SampleRun.FlowSensor.PumpA.FlowZeroAverage.Value:-0.001
+Journal.SampleRun.FlowSensor.PumpA.FlowZeroCompensation.Value:-0.001
+Journal.SampleRun.FlowSensor.PumpB.FlowZeroAverage.Value:0.001
+Journal.SampleRun.FlowSensor.PumpB.FlowZeroCompensation.Value:0.008
+Journal.SampleRun.FlowSensor.PumpC.FlowZeroAverage.Value:0.000
+Journal.SampleRun.FlowSensor.PumpC.FlowZeroCompensation.Value:-0.003
+Journal.SampleRun.FlowSensor.PumpD.FlowZeroAverage.Value:-0.001
+Journal.SampleRun.FlowSensor.PumpD.FlowZeroCompensation.Value:-0.006

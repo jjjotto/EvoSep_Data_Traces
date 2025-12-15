@@ -1,0 +1,87 @@
+24478
+Component: Host
+Computer name: QTRAP1 
+User name: instrument 
+---------------------------------------------------------------
+Component: Software
+Evosep Eno Chronos Plugin: ev1500-chronosplugin_1.1.63.0 
+Chronos: 5.2.17.0 
+---------------------------------------------------------------
+Component: Robotic Sample Injection - RSI
+Driver: 2.4.57 (2.4.19129.1051) 
+Firmware: 2.4.59.1 (2.4.21099.1639) 
+---------------------------------------------------------------
+Component: pumpa
+Bus location: 7@172.17.17.1 
+Product number: 1502 
+Serial number: 3891 
+Firmware version: 64 
+Type identifier: EV1090.2 
+Flowmeter serial number: 253100199 
+Diagnostic codes:  
+Displacement (total): 22 mL
+Displacement (seal): 22 mL
+---------------------------------------------------------------
+Component: pumpb
+Bus location: 6@172.17.17.1 
+Product number: 1502 
+Serial number: 3890 
+Firmware version: 64 
+Type identifier: EV1090.2 
+Flowmeter serial number: 253100171 
+Diagnostic codes:  
+Displacement (total): 21 mL
+Displacement (seal): 21 mL
+---------------------------------------------------------------
+Component: pumpc
+Bus location: 5@172.17.17.1 
+Product number: 1502 
+Serial number: 3893 
+Firmware version: 64 
+Type identifier: EV1090.2 
+Flowmeter serial number: 253100187 
+Diagnostic codes:  
+Displacement (total): 25 mL
+Displacement (seal): 25 mL
+---------------------------------------------------------------
+Component: pumpd
+Bus location: 4@172.17.17.1 
+Product number: 1502 
+Serial number: 3892 
+Firmware version: 64 
+Type identifier: EV1090.2 
+Flowmeter serial number: 253100188 
+Diagnostic codes:  
+Displacement (total): 21 mL
+Displacement (seal): 21 mL
+---------------------------------------------------------------
+Component: pumphp
+Bus location: 3@172.17.17.1 
+Product number: 1501 
+Serial number: 1765 
+Firmware version: 64 
+Type identifier: EV1090.2 
+Flowmeter serial number: 252000286 
+Diagnostic codes:  
+Displacement (total): 7 mL
+Displacement (seal): 7 mL
+---------------------------------------------------------------
+Component: instrument
+Bus location: 2@172.17.17.1 
+Product number: EV1500 
+Serial number: S10782 
+Firmware version: 3 
+Type identifier: EV1504.0 
+Diagnostic codes:  
+30 SPD: 0 
+60 SPD: 0 
+100 SPD: 0 
+200 SPD: 53 
+300 SPD: 0 
+500 SPD: 0 
+Whisper 20 SPD: 0 
+Whisper 40 SPD: 0 
+Whisper 80 SPD: 0 
+Whisper 120 SPD: 0 
+Total analyses: 53 
+---------------------------------------------------------------
