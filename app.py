@@ -4,6 +4,12 @@ Allows users to select runs, metrics, and generate interactive plots.
 """
 import os
 from pathlib import Path
+import base64
+import io
+import zipfile
+import tempfile
+import shutil
+from datetime import datetime
 import dash
 from dash import dcc, html, Input, Output, State, ALL, callback_context
 import plotly.graph_objs as go
@@ -11,6 +17,9 @@ import pandas as pd
 
 # Base directory for example data
 DATA_DIR = Path(__file__).parent / "ExampleData"
+# Temporary directory for uploaded data
+UPLOAD_DIR = Path(tempfile.gettempdir()) / "evosep_uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 def parse_time_to_seconds(time_str):
@@ -75,19 +84,72 @@ def parse_data_file(filepath):
         return None, None
 
 
-def get_available_runs():
-    """Get list of available run folders."""
+def parse_journal_file(run_path):
+    """Parse journal.txt file to extract metadata."""
+    journal_path = run_path / "journal.txt"
+    metadata = {
+        'procedure_name': '',
+        'log_name': '',
+        'sample_name': '',
+        'vial_position': '',
+        'date_time': ''
+    }
+    
+    if journal_path.exists():
+        try:
+            with open(journal_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('Procedure.Name:'):
+                        metadata['procedure_name'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Procedure.Logname:'):
+                        metadata['log_name'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Procedure.Samplename:'):
+                        metadata['sample_name'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Procedure.Vialposition:'):
+                        metadata['vial_position'] = line.split(':', 1)[1].strip()
+        except Exception as e:
+            print(f"Error parsing journal file {journal_path}: {e}")
+    
+    # Try to extract date/time from folder name if not in journal
+    if not metadata['date_time']:
+        folder_name = run_path.name
+        # Format: 200-SPD_2025-12-11_12-27-48
+        parts = folder_name.split('_')
+        if len(parts) >= 3:
+            date_part = parts[-2]
+            time_part = parts[-1]
+            try:
+                metadata['date_time'] = f"{date_part} {time_part.replace('-', ':')}"
+            except:
+                pass
+    
+    return metadata
+
+
+def get_available_runs(data_source='example'):
+    """Get list of available run folders with metadata."""
     runs = []
-    if DATA_DIR.exists():
-        for item in sorted(DATA_DIR.iterdir()):
+    source_dir = DATA_DIR if data_source == 'example' else UPLOAD_DIR
+    
+    if source_dir.exists():
+        for item in sorted(source_dir.iterdir()):
             if item.is_dir():
-                runs.append(item.name)
+                metadata = parse_journal_file(item)
+                runs.append({
+                    'name': item.name,
+                    'procedure': metadata['procedure_name'],
+                    'sample': metadata['sample_name'],
+                    'vial': metadata['vial_position'],
+                    'datetime': metadata['date_time']
+                })
     return runs
 
 
-def get_metrics_for_run(run_name):
+def get_metrics_for_run(run_name, data_source='example'):
     """Get available metrics grouped by pump for a specific run."""
-    run_path = DATA_DIR / run_name
+    source_dir = DATA_DIR if data_source == 'example' else UPLOAD_DIR
+    run_path = source_dir / run_name
     if not run_path.exists() or not run_path.is_dir():
         return {}
     
@@ -120,34 +182,111 @@ app.title = "Evosep Eno Data Viewer"
 app.layout = html.Div([
     html.H1("Evosep Eno System Data Viewer", style={'textAlign': 'center', 'marginBottom': 20}),
     
+    # Data source selection and upload
+    html.Div([
+        html.Div([
+            html.Label("Data Source:", style={'fontWeight': 'bold', 'marginRight': 10}),
+            dcc.RadioItems(
+                id='data-source',
+                options=[
+                    {'label': ' Example Data', 'value': 'example'},
+                    {'label': ' Upload Data', 'value': 'upload'}
+                ],
+                value='example',
+                inline=True,
+                style={'display': 'inline-block', 'marginRight': 20}
+            ),
+        ], style={'display': 'inline-block', 'marginRight': 20}),
+        
+        html.Div([
+            dcc.Upload(
+                id='upload-data',
+                children=html.Button('Browse Local Folders', style={
+                    'padding': '8px 16px',
+                    'backgroundColor': '#007bff',
+                    'color': 'white',
+                    'border': 'none',
+                    'borderRadius': '4px',
+                    'cursor': 'pointer'
+                }),
+                multiple=True,
+                accept='.txt,.zip'
+            ),
+            html.Div(id='upload-status', style={'marginTop': 5, 'fontSize': 12, 'color': 'green'})
+        ], id='upload-container', style={'display': 'inline-block'})
+    ], style={'padding': '10px 20px', 'backgroundColor': '#f8f9fa', 'borderBottom': '1px solid #dee2e6'}),
+    
     html.Div([
         # Left panel - Run and metric selection
         html.Div([
-            html.H3("Select Runs"),
-            dcc.Checklist(
-                id='run-checklist',
-                options=[],
-                value=[],
-                style={'marginBottom': 20}
+            html.Div([
+                html.H3("Select Runs", style={'marginBottom': 10}),
+                html.Div([
+                    dcc.Input(
+                        id='run-search',
+                        type='text',
+                        placeholder='Search runs...',
+                        style={'width': '100%', 'padding': 8, 'marginBottom': 10}
+                    ),
+                ]),
+                html.Div([
+                    html.Label("Filter by:", style={'fontWeight': 'bold', 'marginBottom': 5}),
+                    dcc.Input(
+                        id='procedure-filter',
+                        type='text',
+                        placeholder='Procedure name...',
+                        style={'width': '100%', 'padding': 6, 'marginBottom': 5, 'fontSize': 12}
+                    ),
+                    dcc.Input(
+                        id='sample-filter',
+                        type='text',
+                        placeholder='Sample name...',
+                        style={'width': '100%', 'padding': 6, 'marginBottom': 5, 'fontSize': 12}
+                    ),
+                ], style={'marginBottom': 10}),
+            ]),
+            
+            html.Div([
+                dcc.Checklist(
+                    id='run-checklist',
+                    options=[],
+                    value=[],
+                    style={'marginBottom': 20},
+                    labelStyle={'display': 'block', 'marginBottom': 5}
+                ),
+            ], style={
+                'maxHeight': '300px', 
+                'overflowY': 'auto', 
+                'border': '1px solid #ddd',
+                'padding': 10,
+                'marginBottom': 20,
+                'backgroundColor': '#fafafa'
+            }),
+            
+            html.Hr(),
+            
+            html.H3("Select Metrics", style={'marginBottom': 10}),
+            html.Div([
+                html.Button("Select All", id='select-all-btn', n_clicks=0, 
+                           style={'marginRight': 10, 'padding': '6px 12px'}),
+                html.Button("Unselect All", id='unselect-all-btn', n_clicks=0,
+                           style={'padding': '6px 12px'}),
+            ], style={'marginBottom': 10}),
+            
+            html.Div(
+                id='metric-checklist-container',
+                style={'maxHeight': '300px', 'overflowY': 'auto', 'border': '1px solid #ddd',
+                       'padding': 10, 'backgroundColor': '#fafafa'}
             ),
             
             html.Hr(),
             
-            html.H3("Select Metrics"),
-            html.Div([
-                html.Button("Select All", id='select-all-btn', n_clicks=0, 
-                           style={'marginRight': 10}),
-                html.Button("Unselect All", id='unselect-all-btn', n_clicks=0),
-            ], style={'marginBottom': 10}),
-            
-            html.Div(id='metric-checklist-container'),
-            
-            html.Hr(),
-            
             html.Button("Generate Plot", id='plot-btn', n_clicks=0, 
-                       style={'width': '100%', 'padding': 10, 'fontSize': 16}),
+                       style={'width': '100%', 'padding': 10, 'fontSize': 16,
+                              'backgroundColor': '#28a745', 'color': 'white',
+                              'border': 'none', 'borderRadius': '4px', 'cursor': 'pointer'}),
         ], style={
-            'width': '25%', 
+            'width': '30%', 
             'display': 'inline-block', 
             'verticalAlign': 'top',
             'padding': 20,
@@ -158,33 +297,126 @@ app.layout = html.Div([
         html.Div([
             dcc.Graph(id='data-plot', style={'height': '80vh'})
         ], style={
-            'width': '74%', 
+            'width': '69%', 
             'display': 'inline-block', 
+            'verticalAlign': 'top',
             'padding': 20
         })
-    ])
+    ]),
+    
+    # Hidden div to store data source state
+    dcc.Store(id='current-data-source', data='example')
 ])
+
+
+@app.callback(
+    Output('current-data-source', 'data'),
+    Output('upload-status', 'children'),
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename'),
+    prevent_initial_call=True
+)
+def handle_upload(list_of_contents, list_of_filenames):
+    """Handle uploaded files (zip archives or individual txt files)."""
+    if list_of_contents is None:
+        return 'example', ''
+    
+    # Clear existing uploads
+    if UPLOAD_DIR.exists():
+        for item in UPLOAD_DIR.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+    
+    uploaded_count = 0
+    
+    for content, filename in zip(list_of_contents, list_of_filenames):
+        content_type, content_string = content.split(',')
+        decoded = base64.b64decode(content_string)
+        
+        try:
+            if filename.endswith('.zip'):
+                # Handle zip file
+                with zipfile.ZipFile(io.BytesIO(decoded)) as zip_ref:
+                    zip_ref.extractall(UPLOAD_DIR)
+                    uploaded_count += 1
+            elif filename.endswith('.txt'):
+                # For individual files, we'd need a folder structure
+                # Skip for now as users should upload folders as zip
+                pass
+        except Exception as e:
+            return 'example', f'Error uploading files: {str(e)}'
+    
+    if uploaded_count > 0:
+        return 'upload', f'Successfully uploaded {uploaded_count} archive(s)'
+    return 'example', 'Please upload ZIP files containing run folders'
+
+
+@app.callback(
+    Output('upload-container', 'style'),
+    Input('data-source', 'value')
+)
+def toggle_upload_visibility(data_source):
+    """Show/hide upload button based on data source selection."""
+    if data_source == 'upload':
+        return {'display': 'inline-block'}
+    return {'display': 'none'}
 
 
 @app.callback(
     Output('run-checklist', 'options'),
     Output('run-checklist', 'value'),
-    Input('run-checklist', 'id')
+    Input('data-source', 'value'),
+    Input('current-data-source', 'data'),
+    Input('run-search', 'value'),
+    Input('procedure-filter', 'value'),
+    Input('sample-filter', 'value')
 )
-def populate_runs(_):
-    """Populate the run checklist with available runs."""
-    runs = get_available_runs()
-    options = [{'label': run, 'value': run} for run in runs]
-    # Select the first run by default
-    value = [runs[0]] if runs else []
+def populate_runs(data_source, uploaded_source, search_term, procedure_filter, sample_filter):
+    """Populate the run checklist with available runs and apply filters."""
+    # Use uploaded data source if files were uploaded
+    source = uploaded_source if uploaded_source == 'upload' else data_source
+    
+    runs = get_available_runs(source)
+    
+    # Apply filters
+    filtered_runs = runs
+    
+    if search_term:
+        search_lower = search_term.lower()
+        filtered_runs = [r for r in filtered_runs if search_lower in r['name'].lower()]
+    
+    if procedure_filter:
+        proc_lower = procedure_filter.lower()
+        filtered_runs = [r for r in filtered_runs if proc_lower in r['procedure'].lower()]
+    
+    if sample_filter:
+        sample_lower = sample_filter.lower()
+        filtered_runs = [r for r in filtered_runs if sample_lower in r['sample'].lower()]
+    
+    # Create options with metadata
+    options = []
+    for run in filtered_runs:
+        label = run['name']
+        if run['datetime']:
+            label += f" ({run['datetime']})"
+        if run['procedure']:
+            label += f" - {run['procedure']}"
+        
+        options.append({'label': label, 'value': run['name']})
+    
+    # Select the first run by default if nothing is selected
+    value = [filtered_runs[0]['name']] if filtered_runs else []
     return options, value
 
 
 @app.callback(
     Output('metric-checklist-container', 'children'),
-    Input('run-checklist', 'value')
+    Input('run-checklist', 'value'),
+    Input('current-data-source', 'data')
 )
-def update_metric_checklist(selected_runs):
+def update_metric_checklist(selected_runs, data_source):
     """
     Update metric checklist based on selected runs.
     
@@ -196,7 +428,7 @@ def update_metric_checklist(selected_runs):
         return html.Div("Please select at least one run", style={'color': 'gray'})
     
     # Get metrics from the first selected run
-    metrics = get_metrics_for_run(selected_runs[0])
+    metrics = get_metrics_for_run(selected_runs[0], data_source)
     
     if not metrics:
         return html.Div("No metrics found", style={'color': 'gray'})
@@ -224,7 +456,8 @@ def update_metric_checklist(selected_runs):
                 id={'type': 'metric-checkbox', 'pump': pump},
                 options=metric_options,
                 value=[],
-                style={'marginLeft': 20, 'marginBottom': 10}
+                style={'marginLeft': 20, 'marginBottom': 10},
+                labelStyle={'display': 'block', 'marginBottom': 3}
             )
         )
     
@@ -263,9 +496,10 @@ def select_unselect_all(select_clicks, unselect_clicks, all_options, current_val
     Input('plot-btn', 'n_clicks'),
     State('run-checklist', 'value'),
     State({'type': 'metric-checkbox', 'pump': ALL}, 'value'),
+    State('current-data-source', 'data'),
     prevent_initial_call=True
 )
-def update_plot(n_clicks, selected_runs, selected_metrics_lists):
+def update_plot(n_clicks, selected_runs, selected_metrics_lists, data_source):
     """Generate plot based on selected runs and metrics."""
     if not selected_runs:
         return go.Figure().add_annotation(
@@ -287,11 +521,14 @@ def update_plot(n_clicks, selected_runs, selected_metrics_lists):
             x=0.5, y=0.5, showarrow=False
         )
     
+    # Determine source directory
+    source_dir = DATA_DIR if data_source == 'example' else UPLOAD_DIR
+    
     # Create traces for each run and metric combination
     fig = go.Figure()
     
     for run_name in selected_runs:
-        run_path = DATA_DIR / run_name
+        run_path = source_dir / run_name
         
         for metric_file in selected_metrics:
             filepath = run_path / metric_file
@@ -319,7 +556,7 @@ def update_plot(n_clicks, selected_runs, selected_metrics_lists):
                                     '<extra></extra>'
                     ))
     
-    # Update layout
+    # Update layout with legend positioned below the plot
     fig.update_layout(
         title="Evosep Data Traces",
         xaxis_title="Time (seconds)",
@@ -327,12 +564,14 @@ def update_plot(n_clicks, selected_runs, selected_metrics_lists):
         hovermode='closest',
         showlegend=True,
         legend=dict(
+            orientation="h",
             yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01
+            y=-0.15,
+            xanchor="center",
+            x=0.5
         ),
-        template="plotly_white"
+        template="plotly_white",
+        margin=dict(b=150)  # Add bottom margin for legend
     )
     
     return fig
