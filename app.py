@@ -14,7 +14,15 @@ DATA_DIR = Path(__file__).parent / "ExampleData"
 
 
 def parse_time_to_seconds(time_str):
-    """Convert time string (HH:MM:SS.mmm) to seconds."""
+    """
+    Convert time string to seconds.
+    
+    Args:
+        time_str: Time string in format 'HH:MM:SS.mmm' (e.g., '00:00:01.455')
+        
+    Returns:
+        float: Total seconds, or None if parsing fails
+    """
     try:
         parts = time_str.split(':')
         hours = int(parts[0])
@@ -177,11 +185,17 @@ def populate_runs(_):
     Input('run-checklist', 'value')
 )
 def update_metric_checklist(selected_runs):
-    """Update metric checklist based on selected runs."""
+    """
+    Update metric checklist based on selected runs.
+    
+    Note: Uses metrics from the first selected run. Assumes all runs have
+    similar structure. If runs have different metrics, only those from the
+    first run will be displayed, though plots will work for matching files.
+    """
     if not selected_runs:
         return html.Div("Please select at least one run", style={'color': 'gray'})
     
-    # Get metrics from the first selected run (assume all runs have similar structure)
+    # Get metrics from the first selected run
     metrics = get_metrics_for_run(selected_runs[0])
     
     if not metrics:
@@ -299,7 +313,7 @@ def update_plot(n_clicks, selected_runs, selected_metrics_lists):
                         y=df['value'],
                         mode='lines',
                         name=label,
-                        hovertemplate='<b>%{fullData.name}</b><br>' +
+                        hovertemplate='<b>' + label + '</b><br>' +
                                     'Time: %{x:.2f}s<br>' +
                                     'Value: %{y:.3f}<br>' +
                                     '<extra></extra>'
