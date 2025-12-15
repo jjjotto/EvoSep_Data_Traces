@@ -201,7 +201,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Upload(
                 id='upload-data',
-                children=html.Button('Browse Local Folders', style={
+                children=html.Button('Browse Local Files/Folders', style={
                     'padding': '8px 16px',
                     'backgroundColor': '#007bff',
                     'color': 'white',
@@ -212,7 +212,11 @@ app.layout = html.Div([
                 multiple=True,
                 accept='.txt,.zip'
             ),
-            html.Div(id='upload-status', style={'marginTop': 5, 'fontSize': 12, 'color': 'green'})
+            html.Div(id='upload-status', style={'marginTop': 5, 'fontSize': 12, 'color': 'green'}),
+            html.Div([
+                html.Small("Tip: You can select .zip files, individual .txt files, or use Chrome/Edge to select entire folders.", 
+                          style={'color': '#666', 'fontSize': 11})
+            ], style={'marginTop': 3})
         ], id='upload-container', style={'display': 'inline-block'})
     ], style={'padding': '10px 20px', 'backgroundColor': '#f8f9fa', 'borderBottom': '1px solid #dee2e6'}),
     
@@ -241,6 +245,12 @@ app.layout = html.Div([
                         id='sample-filter',
                         type='text',
                         placeholder='Sample name...',
+                        style={'width': '100%', 'padding': 6, 'marginBottom': 5, 'fontSize': 12}
+                    ),
+                    dcc.Input(
+                        id='vial-filter',
+                        type='text',
+                        placeholder='Vial position...',
                         style={'width': '100%', 'padding': 6, 'marginBottom': 5, 'fontSize': 12}
                     ),
                 ], style={'marginBottom': 10}),
@@ -317,7 +327,7 @@ app.layout = html.Div([
     prevent_initial_call=True
 )
 def handle_upload(list_of_contents, list_of_filenames):
-    """Handle uploaded files (zip archives or individual txt files)."""
+    """Handle uploaded files (zip archives, individual txt files, or folder structures)."""
     if list_of_contents is None:
         return 'example', ''
     
@@ -336,7 +346,11 @@ def handle_upload(list_of_contents, list_of_filenames):
         return 'example', f'Error cleaning upload directory: {str(e)}'
     
     uploaded_count = 0
+    txt_files_count = 0
     MAX_ZIP_SIZE = 100 * 1024 * 1024  # 100MB limit
+    
+    # Dictionary to organize files by their run folder
+    run_folders = {}
     
     for content, filename in zip(list_of_contents, list_of_filenames):
         content_type, content_string = content.split(',')
@@ -361,17 +375,55 @@ def handle_upload(list_of_contents, list_of_filenames):
                     zip_ref.extractall(UPLOAD_DIR)
                     uploaded_count += 1
             elif filename.endswith('.txt'):
-                # For individual files, we'd need a folder structure
-                # Skip for now as users should upload folders as zip
-                pass
+                # Handle individual .txt files - organize by folder structure
+                # Filenames from folder uploads contain path separators
+                path_parts = filename.replace('\\', '/').split('/')
+                
+                if len(path_parts) >= 2:
+                    # File is part of a folder structure (e.g., "ExampleData/200-SPD.../Pump-HP_Pressure.txt")
+                    # Find the run folder name (second-to-last part typically)
+                    if len(path_parts) >= 2:
+                        # Get the parent folder name (run folder)
+                        run_folder = path_parts[-2]
+                        
+                        if run_folder not in run_folders:
+                            run_folders[run_folder] = []
+                        
+                        run_folders[run_folder].append({
+                            'filename': path_parts[-1],
+                            'content': decoded
+                        })
+                        txt_files_count += 1
+                else:
+                    # Single file without folder structure - skip
+                    pass
         except zipfile.BadZipFile:
             return 'example', f'Error: {filename} is not a valid ZIP file'
         except Exception as e:
             return 'example', f'Error uploading files: {str(e)}'
     
+    # Write organized txt files to appropriate run folders
+    if run_folders:
+        try:
+            for run_folder, files in run_folders.items():
+                run_path = UPLOAD_DIR / run_folder
+                run_path.mkdir(parents=True, exist_ok=True)
+                
+                for file_info in files:
+                    file_path = run_path / file_info['filename']
+                    with open(file_path, 'wb') as f:
+                        f.write(file_info['content'])
+            
+            uploaded_count += len(run_folders)
+        except Exception as e:
+            return 'example', f'Error writing uploaded files: {str(e)}'
+    
     if uploaded_count > 0:
-        return 'upload', f'Successfully uploaded {uploaded_count} archive(s)'
-    return 'example', 'Please upload ZIP files containing run folders'
+        msg = f'Successfully uploaded {uploaded_count} run folder(s)'
+        if txt_files_count > 0:
+            msg += f' ({txt_files_count} files)'
+        return 'upload', msg
+    return 'example', 'Please upload ZIP files or select folders containing run data'
 
 
 @app.callback(
@@ -392,9 +444,10 @@ def toggle_upload_visibility(data_source):
     Input('current-data-source', 'data'),
     Input('run-search', 'value'),
     Input('procedure-filter', 'value'),
-    Input('sample-filter', 'value')
+    Input('sample-filter', 'value'),
+    Input('vial-filter', 'value')
 )
-def populate_runs(data_source, uploaded_source, search_term, procedure_filter, sample_filter):
+def populate_runs(data_source, uploaded_source, search_term, procedure_filter, sample_filter, vial_filter):
     """Populate the run checklist with available runs and apply filters."""
     # Use uploaded data source if files were uploaded
     source = uploaded_source if uploaded_source == 'upload' else data_source
@@ -416,15 +469,33 @@ def populate_runs(data_source, uploaded_source, search_term, procedure_filter, s
         sample_lower = sample_filter.lower()
         filtered_runs = [r for r in filtered_runs if sample_lower in r['sample'].lower()]
     
-    # Create options with metadata
+    if vial_filter:
+        vial_lower = vial_filter.lower()
+        filtered_runs = [r for r in filtered_runs if vial_lower in r['vial'].lower()]
+    
+    # Create options with metadata displayed in a more informative format
     options = []
     for run in filtered_runs:
-        label = run['name']
-        if run['datetime']:
-            label += f" ({run['datetime']})"
-        if run['procedure']:
-            label += f" - {run['procedure']}"
+        # Build a rich label with all available metadata
+        label_parts = [run['name']]
         
+        # Add datetime if available
+        if run['datetime']:
+            label_parts.append(f"[{run['datetime']}]")
+        
+        # Add procedure if available
+        if run['procedure']:
+            label_parts.append(f"Proc: {run['procedure']}")
+        
+        # Add sample name if available
+        if run['sample']:
+            label_parts.append(f"Sample: {run['sample']}")
+        
+        # Add vial position if available
+        if run['vial']:
+            label_parts.append(f"Vial: {run['vial']}")
+        
+        label = ' | '.join(label_parts)
         options.append({'label': label, 'value': run['name']})
     
     # Select the first run by default if nothing is selected
