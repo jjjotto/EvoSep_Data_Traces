@@ -43,9 +43,14 @@ http://localhost:8050
 
 **Note for Network Access**: The application runs on `0.0.0.0:8050`, making it accessible to other devices on your local network. To access from another computer, use:
 ```
-http://[HOST_IP_ADDRESS]:8050
+http://YOUR_HOST_IP:8050
 ```
-Replace `[HOST_IP_ADDRESS]` with the IP address of the machine running the application.
+Replace `YOUR_HOST_IP` with the IP address of the machine running the application (e.g., `http://192.168.1.100:8050`).
+
+**Production Deployment**: For production use, run with debug mode disabled:
+```bash
+python app.py --no-debug
+```
 
 ## Usage
 

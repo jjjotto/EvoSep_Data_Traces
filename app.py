@@ -121,7 +121,7 @@ def parse_journal_file(run_path):
             time_part = parts[-1]
             try:
                 metadata['date_time'] = f"{date_part} {time_part.replace('-', ':')}"
-            except:
+            except Exception:
                 pass
     
     return metadata
@@ -321,15 +321,22 @@ def handle_upload(list_of_contents, list_of_filenames):
     if list_of_contents is None:
         return 'example', ''
     
+    # Validate UPLOAD_DIR before cleanup
+    if not UPLOAD_DIR.exists() or not str(UPLOAD_DIR).startswith(tempfile.gettempdir()):
+        return 'example', 'Error: Invalid upload directory configuration'
+    
     # Clear existing uploads
-    if UPLOAD_DIR.exists():
+    try:
         for item in UPLOAD_DIR.iterdir():
             if item.is_dir():
                 shutil.rmtree(item)
             else:
                 item.unlink()
+    except Exception as e:
+        return 'example', f'Error cleaning upload directory: {str(e)}'
     
     uploaded_count = 0
+    MAX_ZIP_SIZE = 100 * 1024 * 1024  # 100MB limit
     
     for content, filename in zip(list_of_contents, list_of_filenames):
         content_type, content_string = content.split(',')
@@ -337,14 +344,28 @@ def handle_upload(list_of_contents, list_of_filenames):
         
         try:
             if filename.endswith('.zip'):
-                # Handle zip file
+                # Check file size
+                if len(decoded) > MAX_ZIP_SIZE:
+                    return 'example', f'Error: ZIP file {filename} exceeds 100MB limit'
+                
+                # Handle zip file with path traversal protection
                 with zipfile.ZipFile(io.BytesIO(decoded)) as zip_ref:
+                    # Validate all paths before extraction
+                    for zip_info in zip_ref.infolist():
+                        # Resolve path and check it's within UPLOAD_DIR
+                        extract_path = (UPLOAD_DIR / zip_info.filename).resolve()
+                        if not str(extract_path).startswith(str(UPLOAD_DIR.resolve())):
+                            return 'example', f'Error: ZIP contains invalid paths (security risk)'
+                    
+                    # Extract if all paths are valid
                     zip_ref.extractall(UPLOAD_DIR)
                     uploaded_count += 1
             elif filename.endswith('.txt'):
                 # For individual files, we'd need a folder structure
                 # Skip for now as users should upload folders as zip
                 pass
+        except zipfile.BadZipFile:
+            return 'example', f'Error: {filename} is not a valid ZIP file'
         except Exception as e:
             return 'example', f'Error uploading files: {str(e)}'
     
@@ -578,4 +599,8 @@ def update_plot(n_clicks, selected_runs, selected_metrics_lists, data_source):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8050)
+    # Note: For production deployment, set debug=False to avoid exposing debug information
+    # on the network. Debug mode is enabled here for development convenience.
+    import sys
+    debug_mode = '--debug' in sys.argv or len(sys.argv) == 1
+    app.run_server(debug=debug_mode, host='0.0.0.0', port=8050)
