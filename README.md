@@ -39,7 +39,7 @@ python app.py
 http://localhost:8050
 ```
 
-3. The application will automatically load available run folders from the `ExampleData` directory
+3. When the page loads, enter the parent folder path that contains your Evosep run directories (for example, a serial-number folder such as `\\\server\share\S10782`) and click **Set Data Folder**
 
 **Note for Network Access**: The application runs on `0.0.0.0:8050`, making it accessible to other devices on your local network. To access from another computer, use:
 ```
@@ -54,26 +54,28 @@ python app.py --no-debug
 
 ## Usage
 
-### Data Source
+### Selecting the Data Folder
 
-Choose between two data sources:
-- **Example Data**: Uses the pre-loaded run folders from the `ExampleData` directory
-- **Upload Data**: Allows you to upload your own run data from your local computer
+- Enter the parent folder path that contains all run subfolders at the top of the app and click **Set Data Folder**.
+- The folder can be a UNC/network share (e.g., `\\proteomics-srv-04.swmed.edu\dfs\temporary_files\JO\evosep logs\S10782`) or any local directory.
+- Use **Refresh Runs** if new runs are added to that folder while the app is open.
+- (Optional) Define `EVOSEP_DEFAULT_DATA_PATH` in your environment or in a local `.env` file to pre-populate the path when the app starts. The included `.env` is set to the shared `S10782` folder for this deployment; remove or change it before publishing the project.
 
-To upload your own data:
-1. Select the "Upload Data" radio button
-2. Click "Browse Local Folders" to select ZIP archives containing your run folders
-3. The ZIP file should contain folders with the run data structure (see Data Format below)
+The parent directory is typically the instrument serial number and each subfolder represents a single run. Once a valid folder is set, every run appears in the sortable **Select Runs** table.
 
 ### Selecting Runs
 
-- Use the checkboxes in the "Select Runs" section to choose one or more run folders
-- Multiple runs can be selected to overlay their data on the same plot
+- Use the table's multi-select checkboxes to choose one or more run folders
+- Columns display Folder, Date & Time, Procedure, Sample, and Vial so you can compare metadata at a glance
+- Click any column header to sort ascending/descending; multi-sort with Ctrl/Cmd-click
+- Multiple runs can be selected at once to overlay their traces on a single plot
+- Use the **Select All (Filtered)** button to grab every run currently visible after filtering, or **Clear Selection** to start over
 - **Search and Filter**: Use the search box and filter inputs to quickly find specific runs:
   - Search by run name
   - Filter by procedure name (e.g., "200 SPD")
   - Filter by sample name
-- Run labels display metadata including date/time and procedure name for easy identification
+  - Filter by vial position
+- Run metadata remains visible in the table while you filter and select
 
 ### Selecting Metrics
 
@@ -87,6 +89,7 @@ To upload your own data:
 - Check the boxes next to the metrics you want to plot
 - Use "Select All" to quickly select all available metrics
 - Use "Unselect All" to clear all selections
+- Pump cards are displayed side-by-side for easy comparison, and Pump-HP automatically pre-selects **Actual flow** and **Pressure** for quick plotting
 
 ### Generating Plots
 
@@ -99,17 +102,23 @@ To upload your own data:
 - Hover over data points to see detailed values
 - Use the Plotly toolbar to zoom, pan, or save the plot as an image
 
+### Plot Options
+
+- Toggle **Use dual Y axes (Pressure vs Flow)** to automatically separate high-pressure traces (left axis) from low-flow traces (right axis)
+- Specify optional axis maximums (e.g., 400 bar and 6 µL/min) to quickly zoom each axis; leave blank to auto-scale
+- Dual axes make it much easier to compare pressure and flow simultaneously without sacrificing detail
+
 ### UI Features
 
-- **Scrollable Lists**: When working with many runs (30+), the run and metric lists are scrollable to keep the interface manageable
-- **Side-by-Side Layout**: The selection panel is on the left (30%) and the plot is on the right (69%) for efficient use of screen space
-- **Metadata Display**: Each run shows its date/time and procedure information in the label
+- **Sortable Run Table**: Column headers support native sorting and the table scrolls independently for large datasets
+- **Vertical Layout**: Run selection, metric selection, and the plot now stack vertically for a full-width experience
+- **Metadata Visibility**: Key run details (date/time, procedure, sample, vial) remain visible while filtering and selecting
 
 ## Data Format
 
 The application expects data files in the following format:
 
-- Directory structure: `ExampleData/[run_name]/[metric_files].txt`
+- Directory structure: `[ParentFolder]/[run_name]/[metric_files].txt` (the parent folder is often the serial number such as `S10782`)
 - File naming: `Pump-[PUMP]_[METRIC].txt` (e.g., `Pump-HP_Pressure.txt`)
 - File content: Tab-separated values with:
   - First line: Header with column names
@@ -141,3 +150,4 @@ Procedure.Vialposition:Slot3:2 (S3-A2)
 - **Dash**: Python framework for building web applications
 - **Plotly**: Interactive plotting library
 - **Pandas**: Data manipulation and analysis
+- **python-dotenv**: Loads environment variables (e.g., default data folder path)
